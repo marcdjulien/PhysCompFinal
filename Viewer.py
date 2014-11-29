@@ -13,13 +13,11 @@ class Viewer(threading.Thread):
     def run(self):
         print "Starting Viewer"
         pygame.init()
-        print pygame.display.get_init()
         self.screen = pygame.display.set_mode(VIEWER_SIZE, pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
         while self.draw:
             # Check for events
             for event in pygame.event.get():
-                print event
                 if event.type == pygame.QUIT:
                     self.synth.quit()
                     exit()

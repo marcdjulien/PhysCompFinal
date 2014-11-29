@@ -1,13 +1,11 @@
 from Constants import *
 import threading
-import pygame
 from pygame import midi
 import time
 
 class MidiDevice(threading.Thread):
 	def __init__(self, name):
 		super(MidiDevice, self).__init__()
-		pygame.init()
 		midi.init()
 		self.outport = self.get_device(name)
 		self.play = True
@@ -28,7 +26,7 @@ class MidiDevice(threading.Thread):
 
 		self.playing_mutex.acquire()
 		for nvd in self.playing_notes:
-			self.release_note(NOTE_OFF, nvd[0], nvd[1])
+			self.release_note(nvd[0], nvd[1])
 		self.outport.close()
 
 	def add_note(self, nvd):
@@ -42,7 +40,7 @@ class MidiDevice(threading.Thread):
 
 	def release_note(self, note, vel):
 		self.outport.write_short(NOTE_OFF, note, vel)
-
+		pass
 	def stop(self):
 		self.play = False
 

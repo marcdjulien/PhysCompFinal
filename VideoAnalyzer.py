@@ -63,7 +63,7 @@ class VideoAnalyzer(threading.Thread):
         minRadius = minDiam/2;
         maxDiam = int(frame.shape[1]*0.9)
         maxRadius = maxDiam/2;
-        dp = 2.5
+        dp = 2.0
         c = cv2.HoughCircles(frame, cv2.HOUGH_GRADIENT, 
                              dp=dp, minDist=minDist, minRadius=minRadius, maxRadius=maxRadius)
         if c == None:
