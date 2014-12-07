@@ -1,16 +1,13 @@
-from MidiDevice import MidiDevice
-from Synth import Synth
 from Viewer import Viewer
 from VideoAnalyzer import VideoAnalyzer
 from Constants import *
 import time, pygame
+import os
 
-md = MidiDevice(MIDI_DEVICE_NAME)
-sy = Synth(md)
-va = VideoAnalyzer(sy)
-vw = Viewer(sy)
+os.environ['SDL_VIDEO_CENTERED'] = '1'      # Set the window in the center
 
-md.start()
-sy.start()
+vw = Viewer()
+va = VideoAnalyzer(vw)
+
 vw.start()
 va.start()

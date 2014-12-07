@@ -1,18 +1,26 @@
 import threading
 import cv2
+import time
 from Constants import *
 
-def angle_cos(p0, p1, p2):
+def three_point_angle(p0, p1, p2):
     d1, d2 = (p0-p1).astype('float'), (p2-p1).astype('float')
-    return abs( np.dot(d1, d2) / np.sqrt( np.dot(d1, d1)*np.dot(d2, d2) ) )
+    return np.arccos( np.dot(d1, d2) / np.sqrt( np.dot(d1, d1)*np.dot(d2, d2) ) )
 
+def extreme_points(cnt):
+    leftmost = tuple(cnt[cnt[:,:,0].argmin()][0])
+    rightmost = tuple(cnt[cnt[:,:,0].argmax()][0])
+    topmost = tuple(cnt[cnt[:,:,1].argmin()][0])
+    bottommost = tuple(cnt[cnt[:,:,1].argmax()][0])
+    return np.array([leftmost, topmost, rightmost, bottommost])
+    
 class VideoAnalyzer(threading.Thread):
-    def __init__(self, synth):
+    def __init__(self, viewer):
         super(VideoAnalyzer, self).__init__()
-        # Attach connection to synth
-        self.synth = synth
+        # Attach connection to viewer
+        self.viewer = viewer
         # Open Webcam 
-        self.camera = cv2.VideoCapture(1)
+        self.camera = cv2.VideoCapture(CAMERA_INDEX)
 
     def run(self):
         # Check camera
@@ -24,22 +32,22 @@ class VideoAnalyzer(threading.Thread):
                 # Get Frames for each color
                 frames = self.get_frames()
 
-                #
-                gray = cv2.cvtColor(frames[0], cv2.COLOR_BGR2GRAY)
-                r,gray = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
-                frames[5] = gray
+                # Temp: Threshold
+                #gray = cv2.cvtColor(frames[0], cv2.COLOR_BGR2GRAY)
+                #r,gray = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+                #frames[5] = gray
 
                 # Show each frame in a window
                 #cv2.imshow('Framer', frames[1])
                 #cv2.imshow('Frameg', frames[2])
                 #cv2.imshow('Frameb', frames[3])
                 #cv2.imshow('Framey', frames[4])
-                cv2.imshow('Framew', frames[5])
+                #cv2.imshow('Framew', frames[5])
                 
                 # Get list of shapes found
                 shapes = self.extract_shapes(frames)
-                # Update synth board
-                self.synth.shape2board(shapes)
+                # Update Viewers sound list
+                self.viewer.shape2board(shapes)
                 
                 # Draw and Show shapes in image for debugging
                 frames[0] = self.draw_shapes(frames[0], shapes)
@@ -62,7 +70,7 @@ class VideoAnalyzer(threading.Thread):
         # Read frame from camera
         ret, frame1 = self.camera.read()
         # Blur image to remove noise
-        frame1 = cv2.blur(frame1, (3,3))
+        frame1 = cv2.blur(frame1, (5,3))
         # Convert to HSV color space for color detection
         frame2 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
         # Change to binary image based on color
@@ -89,9 +97,9 @@ class VideoAnalyzer(threading.Thread):
         for s in shapes:
             # Draw circle on frame
             if(s[0] == CIRCLE):
-                x = int(s[2]*WORKSPACE_SIZE[0])
-                y = int(s[3]*WORKSPACE_SIZE[1])
-                r = int(s[4]*WORKSPACE_SIZE[2])
+                x = int(s[2][0][0]*WORKSPACE_SIZE[0])
+                y = int(s[2][0][1]*WORKSPACE_SIZE[1])
+                r = int(s[3]*WORKSPACE_SIZE[2])
                 thickness = 2
                 cv2.circle(frame, (x, y), r, GREEN_RGB, thickness)
             elif s[0] in [SQUARE, TRIANGLE, STAR]:
@@ -114,7 +122,7 @@ class VideoAnalyzer(threading.Thread):
 
     return:
     a list of shapes of the circles where each element is of the form 
-    [CIRCLE, color, x, y, radius]
+    [CIRCLE, color, point, radius]
     """
     def find_circles(self, frame, color):
         # Circle should be atleast 1/10 of the screen apart
@@ -138,20 +146,19 @@ class VideoAnalyzer(threading.Thread):
         if c == None:
             return []
         struct = []
-        # Convert to the format that the other functions/synth needs
+        # Convert to the format that the other functions/___ needs
         # Normalize the values to 0-1 (easier to work with)
         for i in c[0,:]:
             if i[2] > WORKSPACE_SIZE[0]*0.25:
                 continue
             struct.append([CIRCLE, color, 
-                           i[0]/WORKSPACE_SIZE[0], 
-                           i[1]/WORKSPACE_SIZE[1],
+                           [[i[0]/WORKSPACE_SIZE[0], i[1]/WORKSPACE_SIZE[1]]],
                            i[2]/WORKSPACE_SIZE[2]])
         return struct
 
     # Adapted from opencv example squares.py
     """
-    find_squares:
+    find_squares_triangles:
     Returns a list of squares found in the image
 
     params:
@@ -162,32 +169,53 @@ class VideoAnalyzer(threading.Thread):
     a list of squares found where each element will be of the form
     [SQUARE, color, points]
     """
-    def find_squares(self, frame, color):
-        minArea = 10*10 # Minimum area required for sqaure
-        maxArea = WORKSPACE_SIZE[0]*WORKSPACE_SIZE[1]*0.25 # Maximum area of square
-        squares = [] # list of squares that will be returns
+    def find_squares_triangles(self, frame, color):
+        minArea = 20     # Minimum area required for sqaure
+        maxArea = 300*300 # Maximum area of square
+        shapes = [] # list of squares that will be returns
         # Find contour in binary image
         frame, contours, hierarchy = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         
         # Iterate through each contour and add the ones that appear to be
         # legitimate squares
         for cnt in contours:
+
+            found_tri = False
             # Get contour points
             cnt_len = cv2.arcLength(cnt, True)
             cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
+            if len(cnt) > 5:
+                continue
+            
+            if (cv2.contourArea(cnt) < minArea or
+               maxArea < cv2.contourArea(cnt)):
+               continue
+ 
+            cnt = extreme_points(cnt)
+            npts = len(cnt)
 
-            if (len(cnt) == 4 and # Squares should have 4 points
-               minArea < cv2.contourArea(cnt) and  # Make sure the size is appropriate
-               cv2.contourArea(cnt) < maxArea and 
-               cv2.isContourConvex(cnt)):
+            for i in xrange(npts):
                 cnt = cnt.reshape(-1, 2)
-                # Normalize points between 0-1
+                int_angle = three_point_angle(cnt[i], cnt[(i+1)%npts], cnt[(i+2)%npts])
+                if npts == 3 or int_angle > 100.0*PI/180.0:
+                    cnt = cnt.astype(float) # Convert to float
+                    cnt = np.delete(cnt, (i+1)%npts, 0)
+                    cnt[:, 0] = cnt[:, 0]/WORKSPACE_SIZE[0]
+                    cnt[:, 1] = cnt[:, 1]/WORKSPACE_SIZE[1]
+                    # Add to list
+                    shapes.append([TRIANGLE, color, cnt])
+                    found_tri = True
+                    break
+
+            # Shape is Square
+            # Normalize points between 0-1
+            if not found_tri:
                 cnt = cnt.astype(float) # Convert to float
                 cnt[:, 0] = cnt[:, 0]/WORKSPACE_SIZE[0]
                 cnt[:, 1] = cnt[:, 1]/WORKSPACE_SIZE[1]
                 # Add to list
-                squares.append([SQUARE, color, cnt])
-        return squares
+                shapes.append([SQUARE, color, cnt])
+        return shapes
 
     """
     find_triangles:
@@ -254,12 +282,8 @@ class VideoAnalyzer(threading.Thread):
     def extract_shapes(self, frames):
         # list of shapes that will be returns
         shapes = []
-        # Red Circles Frame
-        shapes.extend(self.find_circles(frames[5], RED))
-        # Green __ Frame
-        shapes.extend(self.find_squares(frames[5], GREEN))
-        # BLue __ Frame
-        shapes.extend(self.find_triangles(frames[5], BLUE))
-        # Yellow __ Frame
-        shapes.extend(self.find_stars(frames[5], YELLOW))
+        for color,i in [(RED,1), (GREEN,2), (YELLOW,3), (BLUE,4)]:
+            shapes.extend(self.find_circles(frames[i], color))
+            shapes.extend(self.find_squares_triangles(frames[i], color))
+            shapes.extend(self.find_stars(frames[i], color))
         return shapes

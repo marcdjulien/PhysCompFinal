@@ -1,30 +1,6 @@
 import numpy as np
-NOTE_TO_NUM = {"c":  4,
-					 "c#": 5,
-					 "d":  6,
-					 "d#": 7,
-					 "e":  8,
-					 "f":  9,
-					 "f#": 10,
-					 "g":  11, 
-					 "g#": 12,
-					 "a":  1,
-					 "a#": 2,
-					 "b":  3}
 
-NUM_TO_NOTE = {4:"c", 
-					5:"c#",
-					6: "d", 
-					7:"d#",
-					8: "e", 
-					9: "f", 
-					10:"f#", 
-					11: "g",   
-					12:"g#", 
-					1: "a", 
-					2:"a#",
-					3: "b"}
-BLANK = 0
+
 SQUARE = 1
 CIRCLE = 2
 TRIANGLE = 3
@@ -35,19 +11,8 @@ GREEN = 1
 BLUE = 2
 YELLOW = 3
 
-STEPS = 8
-NOTES = 12 
-
-NOTE_ON = 0x90
-NOTE_OFF = 0x80
-MIDI_DEVICE_PERIOD = 0.01
-MIDI_DEVICE_NAME = "LoopBe Internal MIDI"
-
-NOTE_PERIOD = 0.3
-SEQ_PERIOD = 0.5
-
 VIEWER_FPS = 60
-VIEWER_SIZE= [1000, 700]
+VIEWER_SIZE= [1000*2/4, 700*2/4]
 WORKSPACE_SIZE = (640.0, 480.0, np.hypot(640, 480))
 BLACK_RGB    = (   0,   0,   0)
 WHITE_RGB    = ( 255, 255, 255)
@@ -56,15 +21,9 @@ GREEN_RGB    = (   0, 255,   0)
 RED_RGB      = ( 255,   0,   0)
 ORANGE_RGB   = (255,  102,   0)
 YELLOW_RGB   = (255,  255,   0)
+COLORS = [RED_RGB, GREEN_RGB, BLUE_RGB, YELLOW_RGB, ORANGE_RGB, WHITE_RGB, BLACK_RGB]
 
-BOARD_X = 10
-BOARD_Y = 10
-UNIT_W = (VIEWER_SIZE[0]-(BOARD_X*2))/STEPS
-UNIT_H = (VIEWER_SIZE[1]-(BOARD_Y*2))/STEPS
-MIN_BOX = 100
-ROW_WIDTH = ((VIEWER_SIZE[1]/2)-(MIN_BOX/2))/STEPS
-
-LOWER_BLUE    = np.array([180*(160/360.0),   200, 0], dtype=np.uint8)
+LOWER_BLUE    = np.array([180*(160/360.0),   50, 0], dtype=np.uint8)
 HIGHER_BLUE   = np.array([180*(260.0/360.0), 255, 255], dtype=np.uint8)
 LOWER_RED     = np.array([180*(0.0/360.0),   100, 0], dtype=np.uint8)
 HIGHER_RED    = np.array([180*(30.0/360.0),  255, 255], dtype=np.uint8)
@@ -78,3 +37,38 @@ LOWER_WHITE   = np.array([180*(000.0/360.0),  0, 0], dtype=np.uint8)
 HIGHER_WHITE  = np.array([180*(180.0/360.0), 100, 255], dtype=np.uint8)
 
 PI = np.pi
+RADIAL_QUANT = VIEWER_SIZE[1]/16.0
+
+UPDATE_PERIOD = 0.1
+RENDER_PERIOD = 1.0/VIEWER_FPS
+REV_PERIOD = 10.617
+REV_CONSTANT = REV_PERIOD/(2*PI)
+ANGLE_UPDATE = UPDATE_PERIOD/REV_CONSTANT 
+
+DEBUG = True
+CAMERA_INDEX = 1
+
+SHAPE_TO_ID = {SQUARE:{}, CIRCLE:{}, TRIANGLE:{}, STAR:{}}
+
+SHAPE_TO_ID[SQUARE][RED] = 0
+SHAPE_TO_ID[SQUARE][BLUE] = 1
+SHAPE_TO_ID[SQUARE][GREEN] = 2
+SHAPE_TO_ID[SQUARE][YELLOW] = 3
+
+SHAPE_TO_ID[CIRCLE][RED] = 0
+SHAPE_TO_ID[CIRCLE][BLUE] = 1
+SHAPE_TO_ID[CIRCLE][GREEN] = 2
+SHAPE_TO_ID[CIRCLE][YELLOW] = 3
+
+SHAPE_TO_ID[TRIANGLE][RED] = 0
+SHAPE_TO_ID[TRIANGLE][BLUE] = 1
+SHAPE_TO_ID[TRIANGLE][GREEN] = 2
+SHAPE_TO_ID[TRIANGLE][YELLOW] = 3
+
+SHAPE_TO_ID[STAR][RED] = 0
+SHAPE_TO_ID[STAR][BLUE] = 1
+SHAPE_TO_ID[STAR][GREEN] = 2
+SHAPE_TO_ID[STAR][YELLOW] = 3
+
+
+REQ_VOTES = 1

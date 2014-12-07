@@ -2,32 +2,26 @@ import threading
 import random
 import time
 from Constants import *
+from Instrument import *
+
 
 class Synth(threading.Thread):
 	def __init__(self, md):
 		super(Synth, self).__init__()
 		# Synth board of notes
-		self.board = self.new_board()
-		self.board_mutex = threading.Lock()
-		# Current step being played		
-		self.cur_step = 0
+		self.instruments = []
+		self.initialize_instrument()
+		self.instrument_mutex = threading.Lock()
 		# True/False if the synth should be playing
 		self.play = True
 		self.play_mutex = threading.Lock()
-		# Amount of time to play each note
-		self.note_time = NOTE_PERIOD
 		# Speed of the synthesizer
-		self.seq_time = SEQ_PERIOD
-		# Midi Device Object used to play notes
 		self.md = md
 
 	# Called when the thread is started
 	def run(self):
 		print "Starting Synth"
 		while self.play:
-			# Get the board matrix
-			board = self.get_board()
-			# Grab the current row
 			row = board[self.cur_step]
 
 			# Go through each section in the row and check which note should be played
